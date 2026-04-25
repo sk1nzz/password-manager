@@ -1,7 +1,7 @@
 use uuid::Uuid;
 
 pub struct Account {
-    id: Uuid,
+    pub id: Uuid,
     pub site_name: String,
     pub login: Login,
     pub password: String,

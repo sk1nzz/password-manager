@@ -1,3 +1,6 @@
+use std::fmt::Alignment;
+
+use iced::alignment::Vertical;
 use iced::widget::{button, column, container, radio, row, space, text, text_input};
 use iced::{Element, Length};
 
@@ -40,24 +43,42 @@ impl NewAccountForm {
     pub fn view(&self) -> Element<'_, Message> {
         container(
             column![
-                text("Добавить аккаунт"),
-                text_input("Название сайта", &self.site_name).on_input(Message::SetSiteName),
+                text("Добавить аккаунт").size(20),
+                row![
+                    text("Название сайта").width(Length::FillPortion(2)),
+                    text_input("", &self.site_name)
+                        .on_input(Message::SetSiteName)
+                        .width(Length::FillPortion(3)),
+                ]
+                .align_y(Vertical::Center),
                 row![
                     radio(
                         "Имя пользователя",
                         LoginType::Username,
                         Some(self.login_type),
                         Message::SetLoginType
-                    ),
+                    )
+                    .width(Length::FillPortion(1)),
                     radio(
                         "Почта",
                         LoginType::Email,
                         Some(self.login_type),
                         Message::SetLoginType
-                    ),
-                ],
-                text_input("", &self.login).on_input(Message::SetLogin),
-                text_input("Пароль", &self.password).on_input(Message::SetPassword),
+                    )
+                    .width(Length::FillPortion(1)),
+                    text_input("", &self.login)
+                        .on_input(Message::SetLogin)
+                        .width(Length::FillPortion(3)),
+                ]
+                .align_y(Vertical::Center),
+                row![
+                    text("Пароль").width(Length::FillPortion(2)),
+                    text_input("", &self.password)
+                        .on_input(Message::SetPassword)
+                        .secure(true)
+                        .width(Length::FillPortion(3)),
+                ]
+                .align_y(Vertical::Center),
                 row![
                     space().width(Length::Fill),
                     button("Отмена")
