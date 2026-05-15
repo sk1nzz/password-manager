@@ -9,13 +9,15 @@ mod password_screen;
 use password_screen::PasswordScreen;
 
 pub fn main() -> iced::Result {
-    iced::run(App::update, App::view)
+    iced::application(App::new, App::update, App::view)
+        .title("Менеджер паролей")
+        .run()
 }
 
-#[derive(Default)]
 struct App {
     password_screen_state: PasswordScreen,
     current_page: CurrentPage,
+    connection: rusqlite::Connection,
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq)]
@@ -33,6 +35,15 @@ enum Message {
 }
 
 impl App {
+    fn new() -> Self {
+        let db = rusqlite::Connection::open("./data.db").unwrap();
+        Self {
+            connection: db,
+            password_screen_state: PasswordScreen::default(),
+            current_page: CurrentPage::default(),
+        }
+    }
+
     fn update(&mut self, msg: Message) {
         match msg {
             Message::SetPage(page) => self.current_page = page,
@@ -76,7 +87,7 @@ impl App {
         page: CurrentPage,
     ) -> fn(&iced::Theme, iced::widget::button::Status) -> iced::widget::button::Style {
         if self.current_page == page {
-            button::primary
+            button::secondary
         } else {
             button::subtle
         }

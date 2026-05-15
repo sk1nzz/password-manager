@@ -3,8 +3,9 @@ mod new_account_form;
 
 use std::collections::HashMap;
 
+use iced::alignment::{Horizontal, Vertical};
 use iced::widget::{
-    Column, Container, Row, button, column, container, float, row, scrollable, space, text,
+    Column, Container, Row, button, column, container, float, row, scrollable, space, stack, text,
 };
 use iced::{Element, Length};
 use uuid::Uuid;
@@ -47,6 +48,7 @@ impl PasswordScreen {
                         self.new_account_form.password.clone(),
                     );
                     self.account_cards.insert(acc.id, AccountCard::new(acc));
+                    self.new_account_form_opened = false;
                 }
                 _ => self.new_account_form.update(msg),
             },
@@ -60,12 +62,22 @@ impl PasswordScreen {
     }
 
     pub fn view(&self) -> Element<'_, Message> {
-        column![
-            float(button("Новый").on_press(Message::OpenNewAccount)),
-            self.view_new_account_form(),
+        stack![
             scrollable(self.view_accounts()),
+            container(button("Новый").on_press(Message::OpenNewAccount))
+                .align_x(Horizontal::Right)
+                .align_y(Vertical::Bottom)
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .padding(10),
+            container(self.view_new_account_form())
+                .align_x(Horizontal::Center)
+                .align_y(Vertical::Center)
+                .width(Length::Fill)
+                .height(Length::Fill),
         ]
-        .spacing(10)
+        .width(Length::Fill)
+        .height(Length::Fill)
         .into()
     }
 

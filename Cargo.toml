@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 iced = "0.14.0"
+rusqlite = "0.39.0"
 uuid = { version = "1.23.0", features = ["v4"] }

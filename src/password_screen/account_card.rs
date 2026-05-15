@@ -36,7 +36,7 @@ impl AccountCard {
         container(
             column![
                 text(&self.account.site_name),
-                Self::view_login(&self.account.login),
+                self.view_login(),
                 self.view_password(),
                 button("Удалить")
                     .style(button::danger)
@@ -50,8 +50,8 @@ impl AccountCard {
         .into()
     }
 
-    fn view_login(login: &Login) -> Row<'_, Message> {
-        match login {
+    fn view_login(&self) -> Row<'_, Message> {
+        match &self.account.login {
             Login::Username(username) => row![
                 text("Имя пользователя").width(Length::FillPortion(2)),
                 text_input("", username).width(Length::FillPortion(3))

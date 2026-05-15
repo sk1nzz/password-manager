@@ -53,7 +53,7 @@ impl NewAccountForm {
                 .align_y(Vertical::Center),
                 row![
                     radio(
-                        "Имя пользователя",
+                        "Логин",
                         LoginType::Username,
                         Some(self.login_type),
                         Message::SetLoginType
@@ -93,6 +93,7 @@ impl NewAccountForm {
         )
         .padding(10)
         .style(container::bordered_box)
+        .width(750)
         .into()
     }
 }
