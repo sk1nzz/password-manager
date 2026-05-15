@@ -4,9 +4,7 @@ mod new_account_form;
 use std::collections::HashMap;
 
 use iced::alignment::{Horizontal, Vertical};
-use iced::widget::{
-    Column, Container, Row, button, column, container, float, row, scrollable, space, stack, text,
-};
+use iced::widget::{Column, button, column, container, scrollable, space, stack};
 use iced::{Element, Length};
 use uuid::Uuid;
 
@@ -32,7 +30,10 @@ impl PasswordScreen {
         match msg {
             Message::OpenNewAccount => self.new_account_form_opened = true,
             Message::NewAccountFormMessage(msg) => match msg {
-                new_account_form::Message::Cancel => self.new_account_form_opened = false,
+                new_account_form::Message::Cancel => {
+                    self.new_account_form_opened = false;
+                    self.new_account_form = NewAccountForm::default();
+                }
                 new_account_form::Message::Submit => {
                     let login = match self.new_account_form.login_type {
                         new_account_form::LoginType::Username => {
@@ -42,19 +43,47 @@ impl PasswordScreen {
                             Login::Email(self.new_account_form.login.clone())
                         }
                     };
-                    let acc = Account::new(
-                        self.new_account_form.site_name.clone(),
-                        login,
-                        self.new_account_form.password.clone(),
-                    );
-                    self.account_cards.insert(acc.id, AccountCard::new(acc));
+
+                    if let Some(modify_id) = self.new_account_form.modify_id {
+                        let mod_acc = self.account_cards.get_mut(&modify_id).unwrap();
+                        mod_acc.account.site_name = self.new_account_form.site_name.clone();
+                        mod_acc.account.login = login;
+                        mod_acc.account.password = self.new_account_form.password.clone();
+                    } else {
+                        let acc = Account::new(
+                            self.new_account_form.site_name.clone(),
+                            login,
+                            self.new_account_form.password.clone(),
+                        );
+                        self.account_cards.insert(acc.id, AccountCard::new(acc));
+                    }
+
                     self.new_account_form_opened = false;
+                    self.new_account_form = NewAccountForm::default();
                 }
                 _ => self.new_account_form.update(msg),
             },
             Message::AccountCardMessage(uuid, msg) => match msg {
                 account_card::Message::DeleteAccount => {
                     self.account_cards.remove(&uuid);
+                }
+                account_card::Message::ModifyAccount => {
+                    self.new_account_form.modify_id = Some(uuid);
+                    let acc = &self.account_cards.get(&uuid).unwrap().account;
+                    self.new_account_form.site_name = acc.site_name.clone();
+                    match &acc.login {
+                        Login::Email(email) => {
+                            self.new_account_form.login_type = new_account_form::LoginType::Email;
+                            self.new_account_form.login = email.clone();
+                        }
+                        Login::Username(username) => {
+                            self.new_account_form.login_type =
+                                new_account_form::LoginType::Username;
+                            self.new_account_form.login = username.clone();
+                        }
+                    };
+                    self.new_account_form.password = acc.password.clone();
+                    self.new_account_form_opened = true;
                 }
                 _ => self.account_cards.get_mut(&uuid).unwrap().update(msg),
             },

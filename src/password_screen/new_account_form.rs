@@ -1,11 +1,11 @@
-use std::fmt::Alignment;
-
 use iced::alignment::Vertical;
 use iced::widget::{button, column, container, radio, row, space, text, text_input};
 use iced::{Element, Length};
+use uuid::Uuid;
 
 #[derive(Default)]
 pub struct NewAccountForm {
+    pub modify_id: Option<Uuid>,
     pub site_name: String,
     pub login: String,
     pub password: String,
@@ -43,7 +43,12 @@ impl NewAccountForm {
     pub fn view(&self) -> Element<'_, Message> {
         container(
             column![
-                text("Добавить аккаунт").size(20),
+                text(if let Some(_) = self.modify_id {
+                    "Изменить аккаунт"
+                } else {
+                    "Добавить аккаунт"
+                })
+                .size(20),
                 row![
                     text("Название сайта").width(Length::FillPortion(2)),
                     text_input("", &self.site_name)
@@ -84,7 +89,12 @@ impl NewAccountForm {
                     button("Отмена")
                         .style(button::subtle)
                         .on_press(Message::Cancel),
-                    button("Добавить").on_press(Message::Submit)
+                    button(if let Some(_) = self.modify_id {
+                        "Изменить"
+                    } else {
+                        "Добавить"
+                    })
+                    .on_press(Message::Submit)
                 ]
                 .width(Length::Fill)
                 .spacing(10)

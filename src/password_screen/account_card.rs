@@ -7,7 +7,7 @@ use iced::{
 use crate::models::{Account, Login};
 
 pub struct AccountCard {
-    account: Account,
+    pub account: Account,
     password_visible: bool,
 }
 
@@ -15,6 +15,7 @@ pub struct AccountCard {
 pub enum Message {
     TogglePasswordVisibility,
     DeleteAccount,
+    ModifyAccount,
 }
 
 impl AccountCard {
@@ -28,6 +29,7 @@ impl AccountCard {
     pub fn update(&mut self, msg: Message) {
         match msg {
             Message::TogglePasswordVisibility => self.password_visible = !self.password_visible,
+            Message::ModifyAccount => (),
             Message::DeleteAccount => (),
         }
     }
@@ -38,9 +40,15 @@ impl AccountCard {
                 text(&self.account.site_name),
                 self.view_login(),
                 self.view_password(),
-                button("Удалить")
-                    .style(button::danger)
-                    .on_press(Message::DeleteAccount)
+                row![
+                    button("Изменить")
+                        .style(button::subtle)
+                        .on_press(Message::ModifyAccount),
+                    button("Удалить")
+                        .style(button::danger)
+                        .on_press(Message::DeleteAccount)
+                ]
+                .spacing(10)
             ]
             .spacing(10)
             .width(Length::Fill),
