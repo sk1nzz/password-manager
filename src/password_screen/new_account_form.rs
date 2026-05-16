@@ -1,6 +1,6 @@
 use iced::alignment::Vertical;
 use iced::widget::{button, column, container, radio, row, space, text, text_input};
-use iced::{Element, Length};
+use iced::{Element, Font, Length};
 use uuid::Uuid;
 
 #[derive(Default)]
@@ -48,7 +48,11 @@ impl NewAccountForm {
                 } else {
                     "Добавить аккаунт"
                 })
-                .size(20),
+                .size(20)
+                .font(Font {
+                    weight: iced::font::Weight::Bold,
+                    ..Default::default()
+                }),
                 row![
                     text("Название сайта").width(Length::FillPortion(2)),
                     text_input("", &self.site_name)

@@ -2,11 +2,11 @@ use iced::{
     Alignment, Element, Length, Task,
     widget::{Column, button, column, row, space, text},
 };
-use std::rc::Rc;
 
 mod models;
 mod password_screen;
 
+use models::ACCOUNT_SQL;
 use password_screen::PasswordScreen;
 
 pub fn main() -> iced::Result {
@@ -39,17 +39,7 @@ impl App {
     fn new() -> (Self, Task<Message>) {
         let db = rusqlite::Connection::open("./data.db").unwrap();
 
-        db.execute(
-            "CREATE TABLE IF NOT EXISTS passwords (
-            id TEXT PRIMARY KEY,
-            site_name TEXT NOT NULL,
-            login TEXT NOT NULL,
-            login_type TEXT NOT NULL,
-            password TEXT NOT NULL
-            )",
-            (),
-        )
-        .unwrap();
+        db.execute(ACCOUNT_SQL, ()).unwrap();
 
         (
             Self {
