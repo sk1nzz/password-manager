@@ -4,8 +4,9 @@ mod new_account_form;
 use std::collections::HashMap;
 
 use iced::alignment::{Horizontal, Vertical};
-use iced::widget::{Column, button, column, container, scrollable, space, stack};
-use iced::{Element, Length};
+use iced::widget::{Column, button, column, container, row, scrollable, space, stack};
+use iced::{Element, Length, Task};
+use rusqlite::Connection;
 use uuid::Uuid;
 
 use crate::models::{Account, Login};
@@ -21,14 +22,22 @@ pub struct PasswordScreen {
 #[derive(Clone)]
 pub enum Message {
     OpenNewAccount,
+    LoadAccounts,
     NewAccountFormMessage(new_account_form::Message),
     AccountCardMessage(Uuid, account_card::Message),
 }
 
 impl PasswordScreen {
-    pub fn update(&mut self, msg: Message) {
+    pub fn update(&mut self, msg: Message, db: &Connection) {
         match msg {
             Message::OpenNewAccount => self.new_account_form_opened = true,
+            Message::LoadAccounts => {
+                let passwords = Account::get_all(db);
+                self.account_cards = passwords
+                    .into_iter()
+                    .map(|i| (i.id, AccountCard::new(i)))
+                    .collect();
+            }
             Message::NewAccountFormMessage(msg) => match msg {
                 new_account_form::Message::Cancel => {
                     self.new_account_form_opened = false;
@@ -49,12 +58,14 @@ impl PasswordScreen {
                         mod_acc.account.site_name = self.new_account_form.site_name.clone();
                         mod_acc.account.login = login;
                         mod_acc.account.password = self.new_account_form.password.clone();
+                        mod_acc.account.save(db);
                     } else {
                         let acc = Account::new(
                             self.new_account_form.site_name.clone(),
                             login,
                             self.new_account_form.password.clone(),
                         );
+                        acc.save(db);
                         self.account_cards.insert(acc.id, AccountCard::new(acc));
                     }
 
@@ -65,6 +76,7 @@ impl PasswordScreen {
             },
             Message::AccountCardMessage(uuid, msg) => match msg {
                 account_card::Message::DeleteAccount => {
+                    Account::delete(db, uuid);
                     self.account_cards.remove(&uuid);
                 }
                 account_card::Message::ModifyAccount => {

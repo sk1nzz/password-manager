@@ -1,5 +1,5 @@
 use iced::{
-    Element, Length,
+    Element, Font, Length,
     alignment::Vertical,
     widget::{Row, button, column, container, row, text, text_input},
 };
@@ -37,10 +37,13 @@ impl AccountCard {
     pub fn view(&self) -> Element<'_, Message> {
         container(
             column![
-                text(&self.account.site_name),
-                self.view_login(),
-                self.view_password(),
                 row![
+                    text(&self.account.site_name)
+                        .font(Font {
+                            weight: iced::font::Weight::Bold,
+                            ..Default::default()
+                        })
+                        .width(Length::Fill),
                     button("Изменить")
                         .style(button::subtle)
                         .on_press(Message::ModifyAccount),
@@ -48,7 +51,9 @@ impl AccountCard {
                         .style(button::danger)
                         .on_press(Message::DeleteAccount)
                 ]
-                .spacing(10)
+                .spacing(10),
+                self.view_login(),
+                self.view_password(),
             ]
             .spacing(10)
             .width(Length::Fill),
@@ -61,15 +66,14 @@ impl AccountCard {
     fn view_login(&self) -> Row<'_, Message> {
         match &self.account.login {
             Login::Username(username) => row![
-                text("Имя пользователя").width(Length::FillPortion(2)),
-                text_input("", username).width(Length::FillPortion(3))
+                text("Имя пользователя").width(Length::FillPortion(4)),
+                text_input("", username).width(Length::FillPortion(6))
             ],
             Login::Email(email) => row![
-                text("Почта").width(Length::FillPortion(2)),
-                text_input("", email).width(Length::FillPortion(3))
+                text("Почта").width(Length::FillPortion(4)),
+                text_input("", email).width(Length::FillPortion(6))
             ],
         }
-        .spacing(10)
         .align_y(Vertical::Center)
     }
 
@@ -84,14 +88,14 @@ impl AccountCard {
                     .width(Length::FillPortion(1))
             ],
             false => row![
-                text("Пароль").width(Length::FillPortion(2)),
+                text("Пароль").width(Length::FillPortion(4)),
+                text_input("", "*************").width(Length::FillPortion(5)),
                 button("Показать")
                     .on_press(Message::TogglePasswordVisibility)
                     .style(button::subtle)
-                    .width(Length::FillPortion(3))
+                    .width(Length::FillPortion(1))
             ],
         }
-        .spacing(10)
         .align_y(Vertical::Center)
     }
 }

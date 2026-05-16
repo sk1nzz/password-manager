@@ -1,7 +1,8 @@
 use iced::{
-    Alignment, Element, Length,
+    Alignment, Element, Length, Task,
     widget::{Column, button, column, row, space, text},
 };
+use std::rc::Rc;
 
 mod models;
 mod password_screen;
@@ -35,19 +36,39 @@ enum Message {
 }
 
 impl App {
-    fn new() -> Self {
+    fn new() -> (Self, Task<Message>) {
         let db = rusqlite::Connection::open("./data.db").unwrap();
-        Self {
-            connection: db,
-            password_screen_state: PasswordScreen::default(),
-            current_page: CurrentPage::default(),
-        }
+
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS passwords (
+            id TEXT PRIMARY KEY,
+            site_name TEXT NOT NULL,
+            login TEXT NOT NULL,
+            login_type TEXT NOT NULL,
+            password TEXT NOT NULL
+            )",
+            (),
+        )
+        .unwrap();
+
+        (
+            Self {
+                connection: db,
+                password_screen_state: PasswordScreen::default(),
+                current_page: CurrentPage::default(),
+            },
+            Task::done(Message::PasswordScreenMessage(
+                password_screen::Message::LoadAccounts,
+            )),
+        )
     }
 
     fn update(&mut self, msg: Message) {
         match msg {
             Message::SetPage(page) => self.current_page = page,
-            Message::PasswordScreenMessage(msg) => self.password_screen_state.update(msg),
+            Message::PasswordScreenMessage(msg) => {
+                self.password_screen_state.update(msg, &self.connection)
+            }
         }
     }
 
