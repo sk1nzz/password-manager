@@ -5,6 +5,7 @@ use iced::{
 
 mod models;
 mod password_screen;
+mod totp_screen;
 
 use models::ACCOUNT_SQL;
 use password_screen::PasswordScreen;
