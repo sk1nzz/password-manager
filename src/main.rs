@@ -3,12 +3,15 @@ use iced::{
     widget::{Column, button, column, row, space, text},
 };
 
+mod forms;
 mod models;
 mod password_screen;
 mod totp_screen;
 
 use models::ACCOUNT_SQL;
 use password_screen::PasswordScreen;
+
+use totp_screen::TotpScreen;
 
 pub fn main() -> iced::Result {
     iced::application(App::new, App::update, App::view)
@@ -18,6 +21,7 @@ pub fn main() -> iced::Result {
 
 struct App {
     password_screen_state: PasswordScreen,
+    totp_screen_state: TotpScreen,
     current_page: CurrentPage,
     connection: rusqlite::Connection,
 }
@@ -34,6 +38,7 @@ enum CurrentPage {
 enum Message {
     SetPage(CurrentPage),
     PasswordScreenMessage(password_screen::Message),
+    TotpScreenMessage(totp_screen::Message),
 }
 
 impl App {
@@ -46,6 +51,7 @@ impl App {
             Self {
                 connection: db,
                 password_screen_state: PasswordScreen::default(),
+                totp_screen_state: TotpScreen::default(),
                 current_page: CurrentPage::default(),
             },
             Task::done(Message::PasswordScreenMessage(
@@ -60,6 +66,7 @@ impl App {
             Message::PasswordScreenMessage(msg) => {
                 self.password_screen_state.update(msg, &self.connection)
             }
+            Message::TotpScreenMessage(msg) => self.totp_screen_state.update(msg),
         }
     }
 
@@ -90,6 +97,10 @@ impl App {
                 .password_screen_state
                 .view()
                 .map(Message::PasswordScreenMessage),
+            CurrentPage::CodeScreen => self
+                .totp_screen_state
+                .view()
+                .map(Message::TotpScreenMessage),
             _ => space().into(),
         }
     }

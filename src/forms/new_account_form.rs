@@ -3,6 +3,8 @@ use iced::widget::{button, column, container, radio, row, space, text, text_inpu
 use iced::{Element, Font, Length};
 use uuid::Uuid;
 
+use crate::forms::LoginType;
+
 #[derive(Default)]
 pub struct NewAccountForm {
     pub modify_id: Option<Uuid>,
@@ -10,13 +12,6 @@ pub struct NewAccountForm {
     pub login: String,
     pub password: String,
     pub login_type: LoginType,
-}
-
-#[derive(Default, Clone, Copy, PartialEq, Eq)]
-pub enum LoginType {
-    #[default]
-    Username,
-    Email,
 }
 
 #[derive(Clone)]

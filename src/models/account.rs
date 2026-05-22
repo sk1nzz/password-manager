@@ -1,6 +1,8 @@
 use rusqlite::Connection;
 use uuid::Uuid;
 
+use crate::models::Login;
+
 pub const ACCOUNT_SQL: &str = "
 CREATE TABLE IF NOT EXISTS passwords (
     id TEXT PRIMARY KEY,
@@ -90,9 +92,4 @@ impl Account {
         conn.execute("DELETE FROM passwords WHERE id = ?1", (id.to_string(),))
             .unwrap();
     }
-}
-
-pub enum Login {
-    Email(String),
-    Username(String),
 }

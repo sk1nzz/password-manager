@@ -1,16 +1,17 @@
 mod account_card;
-mod new_account_form;
 
 use std::collections::HashMap;
 
 use iced::alignment::{Horizontal, Vertical};
-use iced::widget::{Column, button, column, container, row, scrollable, space, stack};
-use iced::{Element, Length, Task};
+use iced::widget::{Column, button, column, container, scrollable, space, stack};
+use iced::{Element, Length};
 use rusqlite::Connection;
 use uuid::Uuid;
 
+use crate::forms::LoginType;
+use crate::forms::new_account_form::{self, NewAccountForm};
 use crate::models::{Account, Login};
-use crate::password_screen::{account_card::AccountCard, new_account_form::NewAccountForm};
+use crate::password_screen::account_card::AccountCard;
 
 #[derive(Default)]
 pub struct PasswordScreen {
@@ -44,33 +45,26 @@ impl PasswordScreen {
                     self.new_account_form = NewAccountForm::default();
                 }
                 new_account_form::Message::Submit => {
-                    let login = match self.new_account_form.login_type {
-                        new_account_form::LoginType::Username => {
-                            Login::Username(self.new_account_form.login.clone())
-                        }
-                        new_account_form::LoginType::Email => {
-                            Login::Email(self.new_account_form.login.clone())
-                        }
+                    let form = std::mem::take(&mut self.new_account_form);
+
+                    let login = match form.login_type {
+                        LoginType::Username => Login::Username(form.login),
+                        LoginType::Email => Login::Email(form.login),
                     };
 
-                    if let Some(modify_id) = self.new_account_form.modify_id {
+                    if let Some(modify_id) = form.modify_id {
                         let mod_acc = self.account_cards.get_mut(&modify_id).unwrap();
-                        mod_acc.account.site_name = self.new_account_form.site_name.clone();
+                        mod_acc.account.site_name = form.site_name;
                         mod_acc.account.login = login;
-                        mod_acc.account.password = self.new_account_form.password.clone();
+                        mod_acc.account.password = form.password;
                         mod_acc.account.save(db);
                     } else {
-                        let acc = Account::new(
-                            self.new_account_form.site_name.clone(),
-                            login,
-                            self.new_account_form.password.clone(),
-                        );
+                        let acc = Account::new(form.site_name, login, form.password);
                         acc.save(db);
                         self.account_cards.insert(acc.id, AccountCard::new(acc));
                     }
 
                     self.new_account_form_opened = false;
-                    self.new_account_form = NewAccountForm::default();
                 }
                 _ => self.new_account_form.update(msg),
             },
@@ -85,12 +79,11 @@ impl PasswordScreen {
                     self.new_account_form.site_name = acc.site_name.clone();
                     match &acc.login {
                         Login::Email(email) => {
-                            self.new_account_form.login_type = new_account_form::LoginType::Email;
+                            self.new_account_form.login_type = LoginType::Email;
                             self.new_account_form.login = email.clone();
                         }
                         Login::Username(username) => {
-                            self.new_account_form.login_type =
-                                new_account_form::LoginType::Username;
+                            self.new_account_form.login_type = LoginType::Username;
                             self.new_account_form.login = username.clone();
                         }
                     };
