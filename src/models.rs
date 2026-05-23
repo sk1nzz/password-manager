@@ -4,4 +4,4 @@ pub mod totp;
 
 pub use account::{ACCOUNT_SQL, Account};
 pub use login::Login;
-pub use totp::TotpKey;
+pub use totp::{TOTP_SQL, TotpKey};

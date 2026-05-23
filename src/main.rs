@@ -1,5 +1,5 @@
 use iced::{
-    Alignment, Element, Length, Task,
+    Alignment, Element, Length, Subscription, Task,
     widget::{Column, button, column, row, space, text},
 };
 
@@ -8,7 +8,7 @@ mod models;
 mod password_screen;
 mod totp_screen;
 
-use models::ACCOUNT_SQL;
+use models::{ACCOUNT_SQL, TOTP_SQL};
 use password_screen::PasswordScreen;
 
 use totp_screen::TotpScreen;
@@ -16,6 +16,7 @@ use totp_screen::TotpScreen;
 pub fn main() -> iced::Result {
     iced::application(App::new, App::update, App::view)
         .title("Менеджер паролей")
+        .subscription(App::subscription)
         .run()
 }
 
@@ -46,17 +47,21 @@ impl App {
         let db = rusqlite::Connection::open("./data.db").unwrap();
 
         db.execute(ACCOUNT_SQL, ()).unwrap();
+        db.execute(TOTP_SQL, ()).unwrap();
 
         (
             Self {
                 connection: db,
                 password_screen_state: PasswordScreen::default(),
-                totp_screen_state: TotpScreen::default(),
+                totp_screen_state: TotpScreen::new(),
                 current_page: CurrentPage::default(),
             },
-            Task::done(Message::PasswordScreenMessage(
-                password_screen::Message::LoadAccounts,
-            )),
+            Task::batch(vec![
+                Task::done(Message::PasswordScreenMessage(
+                    password_screen::Message::LoadAccounts,
+                )),
+                Task::done(Message::TotpScreenMessage(totp_screen::Message::LoadKeys)),
+            ]),
         )
     }
 
@@ -66,7 +71,7 @@ impl App {
             Message::PasswordScreenMessage(msg) => {
                 self.password_screen_state.update(msg, &self.connection)
             }
-            Message::TotpScreenMessage(msg) => self.totp_screen_state.update(msg),
+            Message::TotpScreenMessage(msg) => self.totp_screen_state.update(msg, &self.connection),
         }
     }
 
@@ -89,6 +94,12 @@ impl App {
             self.view_page()
         ]
         .padding(10)
+    }
+
+    fn subscription(app: &Self) -> Subscription<Message> {
+        app.totp_screen_state
+            .subscription()
+            .map(Message::TotpScreenMessage)
     }
 
     fn view_page(&self) -> Element<'_, Message> {
