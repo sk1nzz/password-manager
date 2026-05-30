@@ -8,10 +8,7 @@ use iced::{
     alignment::{Horizontal, Vertical},
     time::every,
     time::{Duration, Instant},
-    widget::{
-        Column, Container, Grid, Row, button, column, container, grid, grid::Sizing, row,
-        scrollable, space, stack, text, text_input,
-    },
+    widget::{Grid, button, column, container, grid, grid::Sizing, scrollable, space, stack, text},
 };
 use rusqlite::Connection;
 use uuid::Uuid;
@@ -39,7 +36,6 @@ pub enum Message {
     LoadKeys,
     Tick(Instant),
     NewTotpFormMessage(new_totp_form::Message),
-    DeleteKey(Uuid),
     TotpCardMessage(Uuid, totp_card::Message),
 }
 
@@ -81,10 +77,6 @@ impl TotpScreen {
                 new_totp_form::Message::Cancel => self.new_totp_form_opened = false,
                 _ => self.new_totp_form.update(msg),
             },
-            Message::DeleteKey(id) => {
-                TotpKey::delete(db, id);
-                self.keys.remove(&id);
-            }
             Message::Tick(_) => {
                 self.timer += 1;
                 if self.timer == 30 {
