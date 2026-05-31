@@ -1,11 +1,10 @@
 use iced::{
     Element, Font, Length,
     alignment::Vertical,
-    widget::{Row, button, checkbox, column, container, radio, row, space, text, text_input},
+    widget::{button, column, container, radio, row, space, text, text_input},
 };
 
 use crate::forms::LoginType;
-use crate::models::{Login, TotpKey};
 
 #[derive(Default)]
 pub struct NewTotpForm {

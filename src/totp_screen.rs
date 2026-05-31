@@ -6,9 +6,11 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use iced::{
     Element, Length, Subscription,
     alignment::{Horizontal, Vertical},
+    time::Duration,
     time::every,
-    time::{Duration, Instant},
-    widget::{Grid, button, column, container, grid, grid::Sizing, scrollable, space, stack, text},
+    widget::{
+        Grid, button, center, column, container, grid, grid::Sizing, scrollable, space, stack, text,
+    },
 };
 use rusqlite::Connection;
 use uuid::Uuid;
@@ -33,20 +35,26 @@ pub struct TotpScreen {
 #[derive(Clone)]
 pub enum Message {
     OpenNewTotp,
-    LoadKeys,
-    Tick(Instant),
+    Tick,
     NewTotpFormMessage(new_totp_form::Message),
     TotpCardMessage(Uuid, totp_card::Message),
 }
 
 impl TotpScreen {
-    pub fn new() -> Self {
+    pub fn new(db: &Connection) -> Self {
         let ts = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
         let offset = ts % 30;
+
+        let keys = TotpKey::get_all(db)
+            .into_iter()
+            .map(|i| (i.id, TotpCard::new(i)))
+            .collect();
+
         Self {
+            keys,
             timer: offset as u8,
             ..Default::default()
         }
@@ -55,10 +63,6 @@ impl TotpScreen {
     pub fn update(&mut self, msg: Message, db: &Connection) {
         match msg {
             Message::OpenNewTotp => self.new_totp_form_opened = true,
-            Message::LoadKeys => {
-                let keys = TotpKey::get_all(db);
-                self.keys = keys.into_iter().map(|i| (i.id, TotpCard::new(i))).collect();
-            }
             Message::NewTotpFormMessage(msg) => match msg {
                 new_totp_form::Message::Submit => {
                     let form = std::mem::take(&mut self.new_totp_form);
@@ -77,7 +81,7 @@ impl TotpScreen {
                 new_totp_form::Message::Cancel => self.new_totp_form_opened = false,
                 _ => self.new_totp_form.update(msg),
             },
-            Message::Tick(_) => {
+            Message::Tick => {
                 self.timer += 1;
                 if self.timer == 30 {
                     for (_, v) in &mut self.keys {
@@ -108,11 +112,7 @@ impl TotpScreen {
                 .width(Length::Fill)
                 .height(Length::Fill)
                 .padding(10),
-            container(self.view_new_totp_form())
-                .align_x(Horizontal::Center)
-                .align_y(Vertical::Center)
-                .width(Length::Fill)
-                .height(Length::Fill),
+            center(self.view_new_totp_form()),
         ]
         .width(Length::Fill)
         .height(Length::Fill)
@@ -120,7 +120,7 @@ impl TotpScreen {
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-        every(Duration::from_secs(1)).map(Message::Tick)
+        every(Duration::from_secs(1)).map(|_| Message::Tick)
     }
 
     fn view_new_totp_form(&self) -> Element<'_, Message> {

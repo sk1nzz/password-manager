@@ -3,7 +3,7 @@ mod account_card;
 use std::collections::HashMap;
 
 use iced::alignment::{Horizontal, Vertical};
-use iced::widget::{Column, button, column, container, scrollable, space, stack};
+use iced::widget::{Column, button, center, column, scrollable, space, stack};
 use iced::{Element, Length};
 use rusqlite::Connection;
 use uuid::Uuid;
@@ -23,22 +23,25 @@ pub struct PasswordScreen {
 #[derive(Clone)]
 pub enum Message {
     OpenNewAccount,
-    LoadAccounts,
     NewAccountFormMessage(new_account_form::Message),
     AccountCardMessage(Uuid, account_card::Message),
 }
 
 impl PasswordScreen {
+    pub fn new(db: &Connection) -> Self {
+        let passwords = Account::get_all(db);
+        Self {
+            account_cards: passwords
+                .into_iter()
+                .map(|i| (i.id, AccountCard::new(i)))
+                .collect(),
+            ..Default::default()
+        }
+    }
+
     pub fn update(&mut self, msg: Message, db: &Connection) {
         match msg {
             Message::OpenNewAccount => self.new_account_form_opened = true,
-            Message::LoadAccounts => {
-                let passwords = Account::get_all(db);
-                self.account_cards = passwords
-                    .into_iter()
-                    .map(|i| (i.id, AccountCard::new(i)))
-                    .collect();
-            }
             Message::NewAccountFormMessage(msg) => match msg {
                 new_account_form::Message::Cancel => {
                     self.new_account_form_opened = false;
@@ -98,17 +101,13 @@ impl PasswordScreen {
     pub fn view(&self) -> Element<'_, Message> {
         stack![
             scrollable(self.view_accounts()),
-            container(button("Новый").on_press(Message::OpenNewAccount))
+            center(button("Новый").on_press(Message::OpenNewAccount))
                 .align_x(Horizontal::Right)
                 .align_y(Vertical::Bottom)
                 .width(Length::Fill)
                 .height(Length::Fill)
                 .padding(10),
-            container(self.view_new_account_form())
-                .align_x(Horizontal::Center)
-                .align_y(Vertical::Center)
-                .width(Length::Fill)
-                .height(Length::Fill),
+            center(self.view_new_account_form()),
         ]
         .width(Length::Fill)
         .height(Length::Fill)
