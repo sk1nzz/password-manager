@@ -8,9 +8,8 @@ use iced::{Element, Length};
 use rusqlite::Connection;
 use uuid::Uuid;
 
-use crate::forms::LoginType;
-use crate::forms::new_account_form::{self, NewAccountForm};
-use crate::models::{Account, Login};
+use crate::forms::new_account_form::{self, FormMode, NewAccountForm};
+use crate::models::account::{Account, AccountValidationError};
 use crate::password_screen::account_card::AccountCard;
 
 #[derive(Default)]
@@ -33,7 +32,7 @@ impl PasswordScreen {
         Self {
             account_cards: passwords
                 .into_iter()
-                .map(|i| (i.id, AccountCard::new(i)))
+                .map(|i| (i.id(), AccountCard::new(i)))
                 .collect(),
             ..Default::default()
         }
@@ -41,62 +40,94 @@ impl PasswordScreen {
 
     pub fn update(&mut self, msg: Message, db: &Connection) {
         match msg {
-            Message::OpenNewAccount => self.new_account_form_opened = true,
+            Message::OpenNewAccount => self.open_form(),
             Message::NewAccountFormMessage(msg) => match msg {
-                new_account_form::Message::Cancel => {
-                    self.new_account_form_opened = false;
-                    self.new_account_form = NewAccountForm::default();
-                }
-                new_account_form::Message::Submit => {
-                    let form = std::mem::take(&mut self.new_account_form);
-
-                    let login = match form.login_type {
-                        LoginType::Username => Login::Username(form.login),
-                        LoginType::Email => Login::Email(form.login),
-                    };
-
-                    if let Some(modify_id) = form.modify_id {
-                        let mod_acc = self.account_cards.get_mut(&modify_id).unwrap();
-                        mod_acc.account.site_name = form.site_name;
-                        mod_acc.account.login = login;
-                        mod_acc.account.password = form.password;
-                        mod_acc.account.save(db);
-                    } else {
-                        let acc = Account::new(form.site_name, login, form.password);
-                        acc.save(db);
-                        self.account_cards.insert(acc.id, AccountCard::new(acc));
-                    }
-
-                    self.new_account_form_opened = false;
-                }
+                new_account_form::Message::Cancel => self.close_form(),
+                new_account_form::Message::Submit => self.handle_form_submit(db),
                 _ => self.new_account_form.update(msg),
             },
-            Message::AccountCardMessage(uuid, msg) => match msg {
-                account_card::Message::DeleteAccount => {
-                    Account::delete(db, uuid);
-                    self.account_cards.remove(&uuid);
-                }
-                account_card::Message::ModifyAccount => {
-                    self.new_account_form.modify_id = Some(uuid);
-                    let acc = &self.account_cards.get(&uuid).unwrap().account;
-                    self.new_account_form.site_name = acc.site_name.clone();
-                    match &acc.login {
-                        Login::Email(email) => {
-                            self.new_account_form.login_type = LoginType::Email;
-                            self.new_account_form.login = email.clone();
-                        }
-                        Login::Username(username) => {
-                            self.new_account_form.login_type = LoginType::Username;
-                            self.new_account_form.login = username.clone();
-                        }
-                    };
-                    self.new_account_form.password = acc.password.clone();
-                    self.new_account_form_opened = true;
-                }
-                _ => self.account_cards.get_mut(&uuid).unwrap().update(msg),
+            Message::AccountCardMessage(id, msg) => match msg {
+                account_card::Message::DeleteAccount => self.handle_delete_acc(id, db),
+                account_card::Message::ModifyAccount => self.handle_open_modify(id),
+                _ => self.account_cards.get_mut(&id).unwrap().update(msg),
             },
         }
     }
+
+    fn open_form(&mut self) {
+        self.new_account_form_opened = true;
+        self.new_account_form = NewAccountForm::default();
+    }
+
+    fn close_form(&mut self) {
+        self.new_account_form_opened = false;
+        self.new_account_form = NewAccountForm::default();
+    }
+
+    fn handle_form_submit(&mut self, db: &Connection) {
+        match self.new_account_form.mode {
+            FormMode::Create => {
+                let res = self.new_account_form.create_account();
+                match res {
+                    Ok(acc) => match acc.save(db) {
+                        Ok(_) => {
+                            self.account_cards.insert(acc.id(), AccountCard::new(acc));
+                            self.new_account_form_opened = false;
+                        }
+                        Err(_) => {
+                            self.handle_save_error();
+                        }
+                    },
+                    Err(e) => self.handle_validation_error(e),
+                }
+            }
+            FormMode::Modify(id) => {
+                let mod_acc = self.account_cards.get_mut(&id).unwrap();
+                let res = self.new_account_form.modify_account(&mut mod_acc.account);
+                match res {
+                    Ok(_) => match mod_acc.account.save(db) {
+                        Ok(_) => self.new_account_form_opened = false,
+                        Err(_) => {
+                            self.new_account_form.error =
+                                Some("Уже есть аккаунт с таким названием сайта и логином")
+                        }
+                    },
+                    Err(e) => self.handle_validation_error(e),
+                }
+            }
+        }
+    }
+
+    fn handle_open_modify(&mut self, id: Uuid) {
+        let acc = &self.account_cards.get(&id).unwrap().account;
+        self.new_account_form.init_modify(acc);
+        self.new_account_form_opened = true;
+    }
+
+    fn handle_delete_acc(&mut self, id: Uuid, db: &Connection) {
+        self.account_cards
+            .remove(&id)
+            .unwrap()
+            .account
+            .delete(db)
+            .unwrap();
+    }
+
+    fn handle_validation_error(&mut self, err: AccountValidationError) {
+        match err {
+            AccountValidationError::EmptySiteName => {
+                self.new_account_form.error = Some("Пустое название сайта")
+            }
+            AccountValidationError::EmptyLogin => {
+                self.new_account_form.error = Some("Пустой логин")
+            }
+            AccountValidationError::EmptyPassword => {
+                self.new_account_form.error = Some("Пустой пароль")
+            }
+        }
+    }
+
+    fn handle_save_error(&mut self) {}
 
     pub fn view(&self) -> Element<'_, Message> {
         stack![

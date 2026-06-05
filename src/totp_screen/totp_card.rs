@@ -3,45 +3,32 @@ use iced::{
     widget::{button, column, container, text},
 };
 
-use crate::models::{Login, TotpKey};
+use crate::models::totp::TotpKey;
 
 pub struct TotpCard {
     pub key: TotpKey,
-    current_code: String,
+    pub current_code: String,
 }
 
 #[derive(Clone)]
 pub enum Message {
-    Refresh,
     Delete,
 }
 
 impl TotpCard {
     pub fn new(key: TotpKey) -> Self {
-        let init_code = key.data.generate_current().unwrap();
+        let init_code = key.gen_key();
         Self {
             key,
             current_code: init_code,
         }
     }
 
-    pub fn update(&mut self, msg: Message) {
-        match msg {
-            Message::Refresh => {
-                self.current_code = self.key.data.generate_current().unwrap();
-            }
-            _ => (),
-        }
-    }
-
     pub fn view(&self) -> Element<'_, Message> {
         container(
             column![
-                text(&self.key.site_name),
-                match &self.key.login {
-                    Login::Email(email) => text(format!("Почта: {}", email)),
-                    Login::Username(username) => text(format!("Логин: {}", username)),
-                },
+                text(self.key.site_name()),
+                text(self.key.login()),
                 text(&self.current_code).size(30).style(text::primary),
                 button("Удалить")
                     .style(button::danger)

@@ -11,7 +11,7 @@ pub struct UnlockedScreen {
     password_screen_state: PasswordScreen,
     totp_screen_state: TotpScreen,
     current_page: CurrentPage,
-    connection: rusqlite::Connection,
+    db: rusqlite::Connection,
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq)]
@@ -35,7 +35,7 @@ impl UnlockedScreen {
         let totp_screen_state = TotpScreen::new(&db);
 
         Self {
-            connection: db,
+            db,
             password_screen_state,
             totp_screen_state,
             current_page: CurrentPage::default(),
@@ -45,10 +45,8 @@ impl UnlockedScreen {
     pub fn update(&mut self, msg: Message) {
         match msg {
             Message::SetPage(page) => self.current_page = page,
-            Message::PasswordScreenMessage(msg) => {
-                self.password_screen_state.update(msg, &self.connection)
-            }
-            Message::TotpScreenMessage(msg) => self.totp_screen_state.update(msg, &self.connection),
+            Message::PasswordScreenMessage(msg) => self.password_screen_state.update(msg, &self.db),
+            Message::TotpScreenMessage(msg) => self.totp_screen_state.update(msg, &self.db),
         }
     }
 

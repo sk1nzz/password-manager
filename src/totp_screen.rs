@@ -15,12 +15,10 @@ use iced::{
 use rusqlite::Connection;
 use uuid::Uuid;
 
+use crate::models::totp::TotpValidationError;
 use crate::{
-    forms::{
-        LoginType,
-        new_totp_form::{self, NewTotpForm},
-    },
-    models::{Login, TotpKey},
+    forms::new_totp_form::{self, NewTotpForm},
+    models::totp::TotpKey,
     totp_screen::totp_card::TotpCard,
 };
 
@@ -50,7 +48,7 @@ impl TotpScreen {
 
         let keys = TotpKey::get_all(db)
             .into_iter()
-            .map(|i| (i.id, TotpCard::new(i)))
+            .map(|i| (i.id(), TotpCard::new(i)))
             .collect();
 
         Self {
@@ -64,39 +62,53 @@ impl TotpScreen {
         match msg {
             Message::OpenNewTotp => self.new_totp_form_opened = true,
             Message::NewTotpFormMessage(msg) => match msg {
-                new_totp_form::Message::Submit => {
-                    let form = std::mem::take(&mut self.new_totp_form);
-                    let key = TotpKey::new(
-                        form.site_name,
-                        match form.login_type {
-                            LoginType::Email => Login::Email(form.login),
-                            LoginType::Username => Login::Username(form.login),
-                        },
-                        form.secret,
-                    );
-                    key.save(db);
-                    self.keys.insert(key.id, TotpCard::new(key));
-                    self.new_totp_form_opened = false;
-                }
+                new_totp_form::Message::Submit => self.handle_form_submit(db),
                 new_totp_form::Message::Cancel => self.new_totp_form_opened = false,
                 _ => self.new_totp_form.update(msg),
             },
-            Message::Tick => {
-                self.timer += 1;
-                if self.timer == 30 {
-                    for (_, v) in &mut self.keys {
-                        v.update(totp_card::Message::Refresh);
-                    }
-                    self.timer = 0;
-                }
-            }
+            Message::Tick => self.handle_tick(),
             Message::TotpCardMessage(id, msg) => match msg {
                 totp_card::Message::Delete => {
-                    TotpKey::delete(db, id);
-                    self.keys.remove(&id);
+                    self.keys.remove(&id).unwrap().key.delete(db).unwrap();
                 }
-                _ => self.keys.get_mut(&id).unwrap().update(msg),
             },
+        }
+    }
+
+    fn handle_form_submit(&mut self, db: &Connection) {
+        let res = self.new_totp_form.create_totp();
+        match res {
+            Ok(key) => match key.save(db) {
+                Ok(_) => {
+                    self.keys.insert(key.id(), TotpCard::new(key));
+                    self.new_totp_form_opened = false;
+                }
+                Err(_) => {
+                    self.new_totp_form.error =
+                        Some("Уже есть ключ с таким названием сайта и логином")
+                }
+            },
+            Err(err) => self.handle_validation_error(err),
+        }
+    }
+
+    fn handle_validation_error(&mut self, err: TotpValidationError) {
+        match err {
+            TotpValidationError::EmptySiteName => {
+                self.new_totp_form.error = Some("Пустое название сайта")
+            }
+            TotpValidationError::EmptyLogin => self.new_totp_form.error = Some("Пустой логин"),
+            TotpValidationError::BadSecret => self.new_totp_form.error = Some("Невалидный секрет"),
+        }
+    }
+
+    fn handle_tick(&mut self) {
+        self.timer += 1;
+        if self.timer == 30 {
+            for (_, v) in &mut self.keys {
+                v.current_code = v.key.gen_key();
+            }
+            self.timer = 0;
         }
     }
 

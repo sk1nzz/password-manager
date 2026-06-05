@@ -1,35 +1,38 @@
 use iced::{
     Element, Font, Length,
     alignment::Vertical,
-    widget::{button, column, container, radio, row, space, text, text_input},
+    widget::{button, column, container, row, text, text_input},
 };
 
-use crate::forms::LoginType;
+use crate::models::totp::{TotpKey, TotpValidationError};
 
 #[derive(Default)]
 pub struct NewTotpForm {
     pub site_name: String,
     pub login: String,
-    pub login_type: LoginType,
     pub secret: String,
+    pub error: Option<&'static str>,
 }
 
 #[derive(Clone)]
 pub enum Message {
     SetSiteName(String),
     SetLogin(String),
-    SetLoginType(LoginType),
     SetSecret(String),
     Submit,
     Cancel,
 }
 
 impl NewTotpForm {
+    pub fn create_totp(&mut self) -> Result<TotpKey, TotpValidationError> {
+        let form = std::mem::take(self);
+        TotpKey::new(form.site_name, form.login, form.secret)
+    }
+
     pub fn update(&mut self, msg: Message) {
         match msg {
             Message::SetSiteName(site_name) => self.site_name = site_name,
             Message::SetLogin(login) => self.login = login,
-            Message::SetLoginType(login_type) => self.login_type = login_type,
             Message::SetSecret(secret) => self.secret = secret,
             _ => (),
         }
@@ -50,20 +53,7 @@ impl NewTotpForm {
                 ]
                 .align_y(Vertical::Center),
                 row![
-                    radio(
-                        "Логин",
-                        LoginType::Username,
-                        Some(self.login_type),
-                        Message::SetLoginType
-                    )
-                    .width(Length::FillPortion(1)),
-                    radio(
-                        "Почта",
-                        LoginType::Email,
-                        Some(self.login_type),
-                        Message::SetLoginType
-                    )
-                    .width(Length::FillPortion(1)),
+                    text("Логин/почта").width(Length::FillPortion(2)),
                     text_input("", &self.login)
                         .on_input(Message::SetLogin)
                         .width(Length::FillPortion(3)),
@@ -78,7 +68,10 @@ impl NewTotpForm {
                 ]
                 .align_y(Vertical::Center),
                 row![
-                    space().width(Length::Fill),
+                    text(self.error.unwrap_or_default())
+                        .width(Length::Fill)
+                        .style(text::danger)
+                        .width(Length::Fill),
                     button("Отмена")
                         .style(button::subtle)
                         .on_press(Message::Cancel),

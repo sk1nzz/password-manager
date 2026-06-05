@@ -1,14 +1,15 @@
 use iced::{
-    Element, Length,
+    Element, Font, Length,
     alignment::Vertical,
-    widget::{button, center, column, container, row, space, text, text_input},
+    font::Weight,
+    widget::{button, center, column, container, row, text, text_input},
 };
 
 #[derive(Default)]
 pub struct WelcomeScreen {
     pub password: String,
     pub password_repeat: String,
-    error: Option<String>,
+    pub error: Option<&'static str>,
 }
 
 #[derive(Clone)]
@@ -27,21 +28,15 @@ impl WelcomeScreen {
         }
     }
 
-    fn view_error(&self) -> Element<'_, Message> {
-        if let Some(err) = &self.error {
-            text(err).style(text::danger).into()
-        } else {
-            space().into()
-        }
-    }
-
     pub fn view(&self) -> Element<'_, Message> {
         center(
             container(
                 column![
-                    text("Добро пожаловать в Менеджер паролей!"),
+                    text("Добро пожаловать в Менеджер паролей!").font(Font {
+                        weight: Weight::Bold,
+                        ..Default::default()
+                    }),
                     text("Придумайте пароль, которым будет зашифрована база данных."),
-                    self.view_error(),
                     row![
                         text("Пароль").width(Length::FillPortion(2)),
                         text_input("", &self.password)
@@ -58,7 +53,13 @@ impl WelcomeScreen {
                             .width(Length::FillPortion(3)),
                     ]
                     .align_y(Vertical::Center),
-                    button("Продолжить").on_press(Message::Submit)
+                    row![
+                        text(self.error.unwrap_or_default())
+                            .style(text::danger)
+                            .width(Length::Fill),
+                        button("Продолжить").on_press(Message::Submit)
+                    ]
+                    .align_y(Vertical::Center)
                 ]
                 .spacing(10),
             )

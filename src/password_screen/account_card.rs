@@ -4,7 +4,7 @@ use iced::{
     widget::{Row, button, column, container, row, text, text_input},
 };
 
-use crate::models::{Account, Login};
+use crate::models::account::Account;
 
 pub struct AccountCard {
     pub account: Account,
@@ -38,7 +38,7 @@ impl AccountCard {
         container(
             column![
                 row![
-                    text(&self.account.site_name)
+                    text(self.account.site_name())
                         .font(Font {
                             weight: iced::font::Weight::Bold,
                             ..Default::default()
@@ -64,16 +64,10 @@ impl AccountCard {
     }
 
     fn view_login(&self) -> Row<'_, Message> {
-        match &self.account.login {
-            Login::Username(username) => row![
-                text("Имя пользователя").width(Length::FillPortion(4)),
-                text_input("", username).width(Length::FillPortion(6))
-            ],
-            Login::Email(email) => row![
-                text("Почта").width(Length::FillPortion(4)),
-                text_input("", email).width(Length::FillPortion(6))
-            ],
-        }
+        row![
+            text("Логин/почта").width(Length::FillPortion(4)),
+            text_input("", self.account.login()).width(Length::FillPortion(6))
+        ]
         .align_y(Vertical::Center)
     }
 
@@ -81,7 +75,7 @@ impl AccountCard {
         match self.password_visible {
             true => row![
                 text("Пароль").width(Length::FillPortion(4)),
-                text_input("", &self.account.password).width(Length::FillPortion(5)),
+                text_input("", &self.account.password()).width(Length::FillPortion(5)),
                 button("Скрыть")
                     .on_press(Message::TogglePasswordVisibility)
                     .style(button::subtle)

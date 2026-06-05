@@ -46,12 +46,21 @@ impl App {
                 Message::WelcomeScreenMessage(msg) => match msg {
                     welcome_screen::Message::Submit => {
                         let state = std::mem::take(welcome_screen);
-                        let db = db::init_db_with_password(&state.password);
-                        *self = Self::Unlocked(UnlockedScreen::new(db));
+                        if state.password == state.password_repeat {
+                            match db::validate_password(&state.password) {
+                                Ok(_) => {
+                                    let db = db::init_db_with_password(&state.password);
+                                    *self = Self::Unlocked(UnlockedScreen::new(db));
+                                }
+                                Err(_) => {
+                                    welcome_screen.error = Some("Пароль короче 8 символов");
+                                }
+                            }
+                        } else {
+                            welcome_screen.error = Some("Пароли не совпадают");
+                        }
                     }
-                    _ => {
-                        welcome_screen.update(msg);
-                    }
+                    _ => welcome_screen.update(msg),
                 },
                 _ => (),
             },
@@ -59,7 +68,6 @@ impl App {
                 Message::LockScreenMessage(msg) => match msg {
                     lock_screen::Message::Submit => {
                         let state = std::mem::take(lock_screen);
-
                         match db::unlock_db(&state.password) {
                             Ok(db) => *self = Self::Unlocked(UnlockedScreen::new(db)),
                             Err(()) => lock_screen.error = Some("Login error".to_string()),

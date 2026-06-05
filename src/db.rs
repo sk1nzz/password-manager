@@ -1,7 +1,8 @@
 use rusqlite::Connection;
 use std::{env, fs, path::PathBuf};
 
-use crate::models::{ACCOUNT_SQL, TOTP_SQL};
+use crate::models::account::ACCOUNT_SQL;
+use crate::models::totp::TOTP_SQL;
 
 const BASE_PATH: &str = ".local/share/password-manager";
 const DB_FILENAME: &str = "data.db";
@@ -49,5 +50,13 @@ pub fn unlock_db(password: &str) -> Result<Connection, ()> {
     }) {
         Ok(_) => Ok(db),
         Err(_) => Err(()),
+    }
+}
+
+pub fn validate_password(password: &str) -> Result<(), ()> {
+    if password.chars().count() >= 8 {
+        Ok(())
+    } else {
+        Err(())
     }
 }
