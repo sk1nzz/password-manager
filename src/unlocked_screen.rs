@@ -19,7 +19,6 @@ pub enum CurrentPage {
     #[default]
     PasswordScreen,
     CodeScreen,
-    SettingsScreen,
 }
 
 #[derive(Clone)]
@@ -60,9 +59,6 @@ impl UnlockedScreen {
                 button("Коды")
                     .on_press(Message::SetPage(CurrentPage::CodeScreen))
                     .style(self.button_style(CurrentPage::CodeScreen)),
-                button("Настройки")
-                    .on_press(Message::SetPage(CurrentPage::SettingsScreen))
-                    .style(self.button_style(CurrentPage::SettingsScreen))
             ]
             .align_y(Alignment::Center)
             .spacing(10),
@@ -88,7 +84,6 @@ impl UnlockedScreen {
                 .totp_screen_state
                 .view()
                 .map(Message::TotpScreenMessage),
-            _ => space().into(),
         }
     }
 
